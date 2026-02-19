@@ -7,6 +7,6 @@ class Alert(BaseModel):
     timestamp: str
     people_count: int
     weapons_count: int
-    vehicle_type:  Literal["motorcycle", "jeep", "truck", "car", None]
+    vehicle_type: Literal["motorcycle", "jeep", "truck", "car", "none"]
     distance_from_fence_m: int
-    visibility_quality: int | float = Field(gt=0, lt=100)
+    visibility_quality: float | int = Field(gt=-1, ls=100)

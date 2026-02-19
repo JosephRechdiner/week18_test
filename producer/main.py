@@ -23,16 +23,20 @@ def load_data():
 def validate_alerts(alerts: list[dict]):
     return [Alert(**alert) for alert in alerts]
 
+def convert_to_python_obj(alerts: list[Alert]):
+    return [alert.model_dump() for alert in alerts]
+
 # =====================================================
 # REDIS UTILS 
 # =====================================================
 
-def sending_to_redis_queue(alerts: list[Alert], queue_name: str, redis: Redis):
+def sending_to_redis_queue(alerts: list[dict], queue_name: str, redis: Redis):
     idx = 0
     for alert in alerts:
-        metadata = {"id": idx + 1}
+        metadata = {"id": idx}
         redis.lpush(queue_name, json.dumps(metadata))
-        redis.hset(f"Alert:{metadata['id']}", mapping=json.dumps(alert.model_dump()))
+        redis.hset(f"Alert:{metadata['id']}", mapping=alert)
+        idx += 1
 
 # =====================================================
 # MAIN FUNCTION
@@ -53,9 +57,10 @@ def main(alerts, redis):
 if __name__ == "__main__":
     alerts = load_data()
     validated_alerts = validate_alerts(alerts)
+    python_obj_alerts = convert_to_python_obj(validated_alerts)
 
     r = get_redis_connection()
-    main(alerts, r)
+    main(python_obj_alerts, r)
 
 
 # while True:
