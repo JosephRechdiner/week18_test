@@ -4,21 +4,23 @@ from redis_connection import get_redis_connection
 import json
 
 # =====================================================
-# MAIN FUNCTION
+# REDIS READERS
 # =====================================================
 
-def main(redis: Redis, mongo_manager: MongoManager):
+def handle_urgent_queue(redis: Redis, mongo_manager: MongoManager):
     client = mongo_manager.get_client()
     while True:
         _, metadata = redis.brpop("urgent_queue")
-        if not metadata:
-            break
+        if metadata:
+            return
         metadata_str = json.loads(metadata)
         alert_id = metadata_str["id"]
         alert_data = r.hgetall(f'Alert:{alert_id}')
         alert_data = {k.decode(): v.decode() for k, v in alert_data.items()}
         insert_to_mongo(alert_data, client)
 
+def handle_normal_queue(redis: Redis, mongo_manager: MongoManager):
+    client = mongo_manager.get_client()
     while True:
         _, metadata = redis.brpop("normal_queue")
         if not metadata:
@@ -28,6 +30,14 @@ def main(redis: Redis, mongo_manager: MongoManager):
         alert_data = r.hgetall(f'Alert:{alert_id}')
         alert_data = {k.decode(): v.decode() for k, v in alert_data.items()}
         insert_to_mongo(alert_data, client)
+
+# =====================================================
+# MAIN FUNCTION
+# =====================================================
+
+def main(redis: Redis, mongo_manager: MongoManager):
+    handle_urgent_queue(redis, mongo_manager)
+    handle_normal_queue(redis, mongo_manager)
 
 # =====================================================
 # RUN

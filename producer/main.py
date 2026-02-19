@@ -30,13 +30,14 @@ def convert_to_python_obj(alerts: list[Alert]):
 # REDIS UTILS 
 # =====================================================
 
-def sending_to_redis_queue(alerts: list[dict], queue_name: str, redis: Redis):
-    idx = 0
+def sending_to_redis_queue(start_idx, alerts: list[dict], queue_name: str, redis: Redis):
+    idx = start_idx
     for alert in alerts:
         metadata = {"id": idx}
         redis.lpush(queue_name, json.dumps(metadata))
         redis.hset(f"Alert:{metadata['id']}", mapping=alert)
         idx += 1
+    return idx
 
 # =====================================================
 # MAIN FUNCTION
@@ -47,8 +48,8 @@ def main(alerts, redis):
     urgent_queue, normal_queue = dividing_alerts_to_queues(alerts)
 
     # sending each queue to redis
-    sending_to_redis_queue(urgent_queue, "urgent_queue", redis)
-    sending_to_redis_queue(normal_queue, "normal_queue", redis)
+    last_inserted = sending_to_redis_queue(1, urgent_queue, "urgent_queue", redis)
+    sending_to_redis_queue(last_inserted, normal_queue, "normal_queue", redis)
 
 # =====================================================
 # RUN
