@@ -61,28 +61,3 @@ if __name__ == "__main__":
 
     r = get_redis_connection()
     main(python_obj_alerts, r)
-
-
-# while True:
-#     metadata = r.brpop("test_queue")[1]
-#     metadata_str = json.loads(metadata)
-#     task_id = metadata_str["id"]
-
-#     task_data = {k.decode(): v.decode() for k, v in r.hgetall(task_id).items()}
-#     print(task_data)
-
-
-
-
-# metadata = {
-#     "id": 123
-# }
-
-# r.lpush("test_queue", json.dumps(metadata))
-
-# data = {
-#     "person_id": 1,
-#     "name": "yossi"
-#     }
-
-# r.hset(metadata["id"], mapping=data)
