@@ -1,4 +1,8 @@
 import json
+from redis import Redis
+from priority_logic import dividing_alerts_to_queues
+from models import Alert
+from redis_connection import get_redis_connection
 
 # =====================================================
 # GETTING DATA FROM JSON
@@ -13,10 +17,46 @@ def load_data():
         raise Exception(f"Could not open border_alerts.json file, Error: {str(e)}")
     
 # =====================================================
-# GETTING DATA FROM JSON
+# PYDANTIC VALIDATION
 # =====================================================
 
-data = load_data()
+def validate_alerts(alerts: list[dict]):
+    return [Alert(**alert) for alert in alerts]
+
+# =====================================================
+# REDIS UTILS 
+# =====================================================
+
+def sending_to_redis_queue(alerts: list[Alert], queue_name: str, redis: Redis):
+    idx = 0
+    for alert in alerts:
+        metadata = {"id": idx + 1}
+        redis.lpush(queue_name, json.dumps(metadata))
+        redis.hset(f"Alert:{metadata['id']}", mapping=json.dumps(alert.model_dump()))
+
+# =====================================================
+# MAIN FUNCTION
+# =====================================================
+
+def main(alerts, redis):
+    # making the logic part
+    urgent_queue, normal_queue = dividing_alerts_to_queues(alerts)
+
+    # sending each queue to redis
+    sending_to_redis_queue(urgent_queue, "urgent_queue", redis)
+    sending_to_redis_queue(normal_queue, "normal_queue", redis)
+
+# =====================================================
+# RUN
+# =====================================================
+
+if __name__ == "__main__":
+    alerts = load_data()
+    validated_alerts = validate_alerts(alerts)
+
+    r = get_redis_connection()
+    main(alerts, r)
+
 
 # while True:
 #     metadata = r.brpop("test_queue")[1]
@@ -29,15 +69,15 @@ data = load_data()
 
 
 
-metadata = {
-    "id": 123
-}
+# metadata = {
+#     "id": 123
+# }
 
-r.lpush("test_queue", json.dumps(metadata))
+# r.lpush("test_queue", json.dumps(metadata))
 
-data = {
-    "person_id": 1,
-    "name": "yossi"
-    }
+# data = {
+#     "person_id": 1,
+#     "name": "yossi"
+#     }
 
-r.hset(metadata["id"], mapping=data)
+# r.hset(metadata["id"], mapping=data)
